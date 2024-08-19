@@ -1,0 +1,95 @@
+syntax="proto3";
+
+
+option go_package="proto/";
+//
+package user;
+
+
+message User{
+  int64 id =1;
+  int64 role_id=2;
+  string email=3;
+  string password=4;
+  string name=5;
+  string last_access=6;
+  string created_at=7;
+  string updated_at=8;
+  string deleted_at=9;
+}
+
+message Role{
+  int64 r_create =1;
+  int64 r_read=2;
+  int64 r_update=3;
+  int64 r_delete=4;
+  int64 id=5;
+  int64 user_id=6;
+
+}
+
+message LoginPayload{
+  string email=1;
+  string password=2;
+}
+
+message LoginResponse{
+  bool status=1;
+  string message=2;
+  LoginData data=3;
+}
+message CreateUserResponse{
+  bool status=1;
+  string message=2;
+}
+
+message UpdateUserResponse{
+  bool status=1;
+  string message=2;
+
+}
+message DeleteUserResponse{
+  bool status=1;
+  string message=2;
+
+}
+
+message LoginData{
+  string access_token =1;
+}
+
+message GetAllUsersResponse{
+  repeated User data =1;
+  bool status=2;
+  string message=3;
+
+}
+
+message CreateUserPayload{
+  User user =1;
+  string token=2;
+  string x_link=3;
+}
+message UpdateUserPayload{
+  User user =1;
+  string token=2;
+  string x_link=3;
+  int64 id=4;
+}
+
+message DeleteUserPayload{
+  int64 user_id =1;
+  string token=2;
+  string x_link=3;
+}
+message GetAllUsersPayload{
+  string token=1;
+  string x_link=2;
+}
+service UserService{
+  rpc Login(LoginPayload) returns (LoginResponse);
+  rpc GetAllUsers(GetAllUsersPayload) returns (GetAllUsersResponse);
+  rpc CreateUser(CreateUserPayload) returns (CreateUserResponse);
+  rpc UpdateUser(UpdateUserPayload) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserPayload) returns (DeleteUserResponse);
+}
