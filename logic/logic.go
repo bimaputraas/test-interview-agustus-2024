@@ -79,85 +79,81 @@ func (logic *Logic) Login(email string, password string) (string, error) {
 	return token, nil
 }
 
-func (logic *Logic) Auth(auth AuthParams) (user.User, error) {
-	if auth.Token == "" {
-		return user.User{}, errors.New("no token")
+func (logic *Logic) Authentication(token string) (*user.User, error) {
+	if token == "" {
+		return &user.User{}, errors.New("no token")
 	}
 
-	if auth.XLinkService == "" {
-		return user.User{}, errors.New("unauthorized user")
-	}
-
-	if auth.XLinkService != "be" {
-		return user.User{}, errors.New("unauthorized user")
-	}
-
-	jwt, err := pkg.ParseJWT(auth.Token, []byte("example"))
+	jwt, err := pkg.ParseJWT(token, []byte("example"))
 	if err != nil {
-		return user.User{}, err
+		return &user.User{}, err
 	}
 
 	uid, ok := jwt["user_id"].(float64)
 	if !ok {
-		return user.User{}, errors.New("invalid token")
+		return &user.User{}, errors.New("invalid token")
 	}
 
 	u, err := logic.repo.GetUserById(int(uid))
 	if err != nil {
 	}
 	if err == sql.ErrNoRows {
-		return user.User{}, errors.New("unauthorized user")
+		return &user.User{}, errors.New("unauthorized user")
 	}
 
 	if err != nil {
-		return user.User{}, nil
+		return &user.User{}, nil
 	}
 
-	return *u, nil
+	return u, nil
 }
 
-func (logic *Logic) AuthRead(u user.User) (bool, error) {
+type (
+	ActionType int
+)
+
+const (
+	Read   ActionType = 1
+	Update ActionType = 2
+	Delete ActionType = 3
+	Create ActionType = 4
+)
+
+func (logic *Logic) Authorize(u *user.User, xLinkService string, act ActionType) error {
+	if xLinkService != "be" {
+		return errors.New("unauthorized user")
+	}
+
 	role, err := logic.repo.GetUserRoleById(int(u.RoleId))
 	if err == sql.ErrNoRows {
-		return false, errors.New("unauthorized user")
+		return errors.New("unauthorized user")
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return role.RRead == 1, nil
-
-}
-func (logic *Logic) AuthCreate(u user.User) (bool, error) {
-	role, err := logic.repo.GetUserRoleById(int(u.RoleId))
-	if err == sql.ErrNoRows {
-		return false, errors.New("unauthorized user")
-	}
-	if err != nil {
-		return false, err
+	if role.RRead != 1 {
+		return errors.New("unauthorized user")
 	}
 
-	return role.RCreate == 1, nil
-}
-func (logic *Logic) AuthDelete(u user.User) (bool, error) {
-	role, err := logic.repo.GetUserRoleById(int(u.RoleId))
-	if err == sql.ErrNoRows {
-		return false, errors.New("unauthorized user")
-	}
-	if err != nil {
-		return false, err
-	}
-
-	return role.RDelete == 1, nil
-}
-func (logic *Logic) AuthUpdate(u user.User) (bool, error) {
-	role, err := logic.repo.GetUserRoleById(int(u.RoleId))
-	if err == sql.ErrNoRows {
-		return false, errors.New("unauthorized user")
-	}
-	if err != nil {
-		return false, err
+	var isValid bool
+	switch act {
+	case Read:
+		isValid = role.RRead == 1
+	case Update:
+		isValid = role.RUpdate == 1
+	case Delete:
+		isValid = role.RDelete == 1
+	case Create:
+		isValid = role.RCreate == 1
+	default:
+		return errors.New("invalid action")
 	}
 
-	return role.RUpdate == 1, nil
+	if !isValid {
+		return errors.New("unauthorized user")
+	}
+
+	return nil
+
 }
